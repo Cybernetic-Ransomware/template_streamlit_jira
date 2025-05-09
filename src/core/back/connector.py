@@ -1,12 +1,11 @@
 import json
-import urllib3
 
-from atlassian import Jira
 import pendulum
+import urllib3
+from atlassian import Jira
 
 from src.config.conf_logger import setup_logger
 from src.config.config import JIRA_SERVER, LIST_OF_AUTHORS
-
 
 logger = setup_logger(__name__, "jira")
 
@@ -20,7 +19,8 @@ class JiraConnector:
         self.jira_warnings()
 
     def _find_user_id(self, name: str) -> dict:
-        raw_response = self.connector.user_find_by_user_string(username=name, start=0, limit=50, include_inactive_users=False)
+        raw_response = self.connector.user_find_by_user_string(username=name, start=0, limit=50,
+                                                               include_inactive_users=False)
 
         response = dict()
         response["key"] = raw_response[0].get("key") if isinstance(raw_response, list) and raw_response else raw_response
@@ -77,12 +77,14 @@ class JiraConnector:
                 response['name'] = issue_name
 
                 deadline = issue.get('fields').get('customfield_11200')
-                deadline_ts = pendulum.from_format(deadline, 'YYYY-MM-DDTHH:mm:ss.SSSZ', tz='Europe/Warsaw', locale='pl')
+                deadline_ts = pendulum.from_format(deadline, 'YYYY-MM-DDTHH:mm:ss.SSSZ',
+                                                   tz='Europe/Warsaw', locale='pl')
                 # response['deadline'] = deadline_ts.strftime("%d/%m/%Y %H:%M")
                 response['deadline'] = deadline_ts
 
                 animation_date = issue.get('fields').get('customfield_18802')
-                animation_date_ts = pendulum.from_format(animation_date, 'YYYY-MM-DDTHH:mm:ss.SSSZ', tz='Europe/Warsaw', locale='pl')
+                animation_date_ts = pendulum.from_format(animation_date, 'YYYY-MM-DDTHH:mm:ss.SSSZ',
+                                                         tz='Europe/Warsaw', locale='pl')
                 # response['animation_date'] = animation_date_ts.strftime("%d/%m/%Y %H:%M")
                 response['animation_date'] = animation_date_ts
 

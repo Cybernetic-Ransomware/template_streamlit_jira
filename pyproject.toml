@@ -16,3 +16,21 @@ dependencies = [
 dev = [
     "ruff>=0.11.8",
 ]
+
+[tool.ruff]
+extend-exclude = []
+line-length = 124
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 124
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "SIM", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["F401", "F841"]
+"test_*.py" = ["F401", "F841"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.params.Depends", "fastapi.Query", "fastapi.params.Query"]

@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
@@ -32,7 +33,7 @@ def main() -> None:
                                  use_container_width=True,
                                  column_config={"issue_link": st.column_config.LinkColumn(),
                                                 "deadline": st.column_config.DatetimeColumn(format="DD/MM/YYYY HH:MM"),
-                                                "animation_date": st.column_config.DatetimeColumn(format="DD/MM/YYYY HH:MM"),
+                                                "animation_date": st.column_config.DatetimeColumn(format="DD/MM/YYYY HH:MM"),  #noqa E501
                                                 }
                                  )
             except Exception as e:
