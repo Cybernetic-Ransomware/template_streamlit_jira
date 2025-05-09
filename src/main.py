@@ -42,7 +42,7 @@ def main() -> None:
         st.header("Znajdź ID użytkownika JIRA")
         name = st.text_input("Wpisz nazwę użytkownika")
 
-        author_options = [a.strip() for a in LIST_OF_AUTHORS.split("'") if a.strip() and not "," in a]
+        author_options = [a.strip() for a in LIST_OF_AUTHORS.split("'") if a.strip() and "," not in a]
         selected_author = st.selectbox("Lub wybierz użytkownika z listy:", [""] + author_options)
 
         if selected_author:
