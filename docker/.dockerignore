@@ -1,0 +1,4 @@
+### basic_deploy_dockerignore template
+.git
+__pycache__
+.idea\.vscode

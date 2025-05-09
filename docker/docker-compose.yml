@@ -1,0 +1,16 @@
+name: cleanupy
+services:
+  app:
+    build:
+      context: ../
+      dockerfile: ./docker/Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/
+    env_file:
+      - .env
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8501:8501"
+    volumes:
+      - ../log:/log
