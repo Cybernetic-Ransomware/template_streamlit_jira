@@ -62,8 +62,14 @@ uvx ruff check
 ```
 
 #### Mypy
-- Not implemented
-
+```powershell
+uv sync --extra dev
+uv run mypy .\src\
+```
+or as a standalone tool:
+```powershell
+uvx mypy .\src\
+```
 
 ## Useful links and documentation
 - Jira Atlassian Python API: [Atlassian](https://atlassian-python-api.readthedocs.io/jira.html)

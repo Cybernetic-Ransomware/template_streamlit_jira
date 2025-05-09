@@ -11,9 +11,9 @@ logger = setup_logger(__name__, "jira")
 
 
 class JiraConnector:
-    connector = None
+    connector: Jira
 
-    def __init__(self, server, token):
+    def __init__(self, server: str, token: str):
         self.connector = Jira(server, token=token, verify_ssl=False)
         self.jira_warnings = urllib3.disable_warnings  # warnings from verify_ssl=False
         self.jira_warnings()
@@ -37,7 +37,7 @@ class JiraConnector:
         if artist_id is None:
             return ['No artist found']
         jql_request = f'status!=Closed  AND Description ~ "clean" AND Animator in ({json.dumps(artist_id)})'
-        issues = self.connector.jql(jql_request).get("issues", {})
+        issues = self.connector.jql(jql_request).get("issues", {})  # type: ignore[union-attr]
 
         list_of_responses = list()
         response = dict()
@@ -68,7 +68,7 @@ class JiraConnector:
 
     def get_cleanup_issues(self) -> list[dict[str, str]]:
             jql_request = f'status!=Closed  AND Description ~ "clean" AND Animator in ({LIST_OF_AUTHORS})'
-            issues = self.connector.jql(jql_request).get("issues", {})
+            issues = self.connector.jql(jql_request).get("issues", {})  # type: ignore[union-attr]
 
             list_of_responses = list()
             response = dict()

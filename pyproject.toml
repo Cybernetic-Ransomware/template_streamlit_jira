@@ -14,6 +14,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "mypy>=1.15.0",
     "ruff>=0.11.8",
 ]
 
@@ -34,3 +35,12 @@ select = ["E", "F", "UP", "B", "SIM", "I"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.params.Depends", "fastapi.Query", "fastapi.params.Query"]
+
+[tool.mypy]
+files = ["src"]
+exclude = ["tests/", "migrations/"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "atlassian.*"
+ignore_missing_imports = true
