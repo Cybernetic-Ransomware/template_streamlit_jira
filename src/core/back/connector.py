@@ -31,11 +31,11 @@ class JiraConnector:
     def find_user_id(self, name: str) -> str:
         return self._find_user_id(name).get('name', 'No name found')
 
-    def get_issues_by_artist(self, artist: str) -> str:
+    def get_issues_by_artist(self, artist: str) -> list:
         artist_id = self._find_user_id(artist).get('name')
         logger.info(f"Requested an artist by the phase: {artist} - found: {artist_id}")
         if artist_id is None:
-            return 'No artist found'
+            return ['No artist found']
         jql_request = f'status!=Closed  AND Description ~ "clean" AND Animator in ({json.dumps(artist_id)})'
         issues = self.connector.jql(jql_request).get("issues", {})
 
