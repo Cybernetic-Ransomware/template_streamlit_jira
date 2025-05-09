@@ -18,7 +18,7 @@ The purpose of this project is to provide a basic interface for strictly restric
 ### Deploy
 1. Clone the repository:
       ```powershell
-      git clone https://github.com/Cybernetic-Ransomware/___.git
+      git clone https://github.com/Cybernetic-Ransomware/template_streamlit_jira.git
       ```
 2. Set .env file based on the template.
 3. Run using Docker:
@@ -28,7 +28,7 @@ The purpose of this project is to provide a basic interface for strictly restric
 ### Dev-instance
 1. Clone the repository:
       ```powershell
-      git clone https://github.com/Cybernetic-Ransomware/___.git
+      git clone https://github.com/Cybernetic-Ransomware/template_streamlit_jira.git
       ```
 2. Set .env file based on the template.
 3. Install UV:
