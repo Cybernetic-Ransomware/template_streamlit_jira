@@ -39,7 +39,13 @@ The purpose of this project is to provide a basic interface for strictly restric
       ```powershell
       uv sync
       ```
-5. Run the application locally:
+5. Install pre-commit hooks:
+      ```powershell
+      uv run pre-commit install
+      uv run pre-commit autoupdate
+      uv run pre-commit run --all-files
+      ```
+6. Run the application locally:
       ```powershell
       streamlit run .\src\main.py
       ```
