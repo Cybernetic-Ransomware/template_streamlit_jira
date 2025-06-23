@@ -1,4 +1,4 @@
-# Event's database handlers for BPOE app
+# Typo in H1
 This repository contains a fast prototype app template to perform JQL searches on a Jira Server instance.
 
 ## Overview
