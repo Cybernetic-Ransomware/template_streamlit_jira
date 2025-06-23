@@ -15,4 +15,4 @@ if config("DEBUG"):
 JIRA_SERVER = config("JIRA_SERVER")
 JIRA_TOKEN = config("JIRA_TOKEN")
 
-LIST_OF_AUTHORS = config("JIRA_SERVER")
+LIST_OF_AUTHORS = config("LIST_OF_AUTHORS")
