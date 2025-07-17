@@ -5,7 +5,7 @@ import urllib3
 from atlassian import Jira
 
 from src.config.conf_logger import setup_logger
-from src.config.config import JIRA_SERVER, LIST_OF_AUTHORS
+from src.config.config import JIRA_SERVER, PROJECT_NAME
 
 logger = setup_logger(__name__, "jira")
 
@@ -65,36 +65,20 @@ class JiraConnector:
 
         return list_of_responses
 
+    def get_project_open_issues(self) -> list[dict[str, str]]:
+        jql_request = f'project = {PROJECT_NAME} AND status != Closed'
+        issues = self.connector.jql(jql_request).get("issues", {})  # type: ignore[union-attr]
 
-    def get_cleanup_issues(self) -> list[dict[str, str]]:
-            jql_request = f'status!=Closed  AND Description ~ "clean" AND Animator in ({LIST_OF_AUTHORS})'
-            issues = self.connector.jql(jql_request).get("issues", {})  # type: ignore[union-attr]
+        list_of_responses = list()
+        response = dict()
+        for issue in issues:
+            issue_name = issue.get('fields').get('summary')
+            response['name'] = issue_name
 
-            list_of_responses = list()
+            description = issue.get('fields').get('description')
+            response['description'] = description
+
+            list_of_responses.append(response)
             response = dict()
-            for issue in issues:
-                issue_name = issue.get('fields').get('summary')
-                response['name'] = issue_name
 
-                deadline = issue.get('fields').get('customfield_11200')
-                deadline_ts = pendulum.from_format(deadline, 'YYYY-MM-DDTHH:mm:ss.SSSZ',
-                                                   tz='Europe/Warsaw', locale='pl')
-                # response['deadline'] = deadline_ts.strftime("%d/%m/%Y %H:%M")
-                response['deadline'] = deadline_ts
-
-                animation_date = issue.get('fields').get('customfield_18802')
-                animation_date_ts = pendulum.from_format(animation_date, 'YYYY-MM-DDTHH:mm:ss.SSSZ',
-                                                         tz='Europe/Warsaw', locale='pl')
-                # response['animation_date'] = animation_date_ts.strftime("%d/%m/%Y %H:%M")
-                response['animation_date'] = animation_date_ts
-
-                animators = [animator.get('name') for animator in issue.get('fields').get('customfield_11913')]
-                response["signed_animators"] = animators
-
-                issue_link = JIRA_SERVER + r'browse/' + str(issue.get('key'))
-                response['issue_link'] = issue_link
-
-                list_of_responses.append(response)
-                response = dict()
-
-            return list_of_responses
+        return list_of_responses

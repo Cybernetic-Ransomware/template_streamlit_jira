@@ -24,26 +24,18 @@ def main() -> None:
     st.title("Stack of cleanups")
 
     tab1, tab2, tab3  = st.tabs(
-        ["Wszystkie cleanupy", "Animator", "Blacklist"]
+        ["Projekt zmiany w issues", "Animator", "Blacklist"]
     )
     with tab1:
-        if st.button("Znajdź taski do cleanupu"):
+        if st.button("Znajdź taski projektu"):
             try:
-                cleanup_tasks = jira.get_cleanup_issues()
-                if not cleanup_tasks:
+                issues = jira.get_project_open_issues()
+                if not issues:
                     st.info("Brak tasków do cleanupu.")
                 else:
-                    df = pd.DataFrame(cleanup_tasks)
-
-                    blacklist_names = set()
-                    with SQLiteConnector() as db_connector:
-                        blacklist_names = {row[1] for row in db_connector.fetch_all()}
-
-                    df = df[~df["name"].isin(blacklist_names)]
-                    df = df.sort_values(by=['deadline'], ascending=False)
-
-
-                    st.dataframe(df,
+                    project_df = pd.DataFrame(issues)
+                    print(project_df, flush=True)
+                    st.dataframe(project_df,
                                  use_container_width=True,
                                  column_config={"issue_link": st.column_config.LinkColumn(),
                                                 "deadline": st.column_config.DatetimeColumn(format="DD/MM/YYYY HH:MM"),
@@ -51,32 +43,8 @@ def main() -> None:
                                                 }
                                  )
 
-                    st.session_state['df'] = df
-                    st.session_state['blacklist_names'] = blacklist_names
-
             except Exception as e:
                 st.error(f"Błąd podczas wyszukiwania: {e}")
-
-        if 'df' in st.session_state:
-            df = st.session_state['df']
-            blacklist_names = st.session_state['blacklist_names']
-
-            with st.expander("🔒 Zablokuj taski"):
-                for i in df.index:
-                    short_name = df.loc[i, "name"][:5]
-                    full_name = df.loc[i, "name"]
-
-                    col1, col2 = st.columns([5, 1])
-                    with col1:
-                        st.markdown(f"- **{full_name}**")
-                    with col2:
-                        if st.button(f"Zablokuj {short_name}", key=f"block_{i}") and full_name not in blacklist_names:
-                            with SQLiteConnector() as db_connector:
-                                db_connector.insert_issue(full_name)
-                                st.success(f"Zablokowano task: {full_name}")
-                            if 'blacklist' in st.session_state:
-                                del st.session_state['blacklist']
-                            st.rerun()
 
     with tab2:
         st.header("Znajdź ID użytkownika JIRA")
