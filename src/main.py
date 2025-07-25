@@ -6,7 +6,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 import pandas as pd
 import streamlit as st
 
-from src.config.config import JIRA_SERVER, JIRA_TOKEN, LIST_OF_AUTHORS, PROJECT_NAME
+from src.config.config import JIRA_SERVER, JIRA_TOKEN, PROJECT_NAME
 from src.core.back.connector import JiraConnector
 from src.core.db.connector import SQLiteConnector
 
@@ -19,19 +19,67 @@ def get_jira_connector():
 
 jira = get_jira_connector()
 
+def get_project_open_issues_df() -> pd.DataFrame:
+    issues = jira.get_project_open_issues_filtered()
+    project_df = pd.DataFrame(issues)
+
+    project_df['count_attachments'] = project_df['attachments'].apply(lambda x: len(x))
+    project_df['count_comments'] = project_df['comments'].apply(lambda x: len(x))
+
+    cols = project_df.columns.tolist()
+
+    if "attachments" in cols and "count_attachments" in cols:
+        attachments_index = cols.index("attachments")
+        cols.remove("count_attachments")
+        cols.insert(attachments_index + 1, "count_attachments")
+
+    if "comments" in cols and "count_comments" in cols:
+        comments_index = cols.index("comments")
+        cols.remove("count_comments")
+        cols.insert(comments_index + 1, "count_comments")
+
+    return project_df[cols]
+
 
 def main() -> None:
     st.title(f"Comparisons project: {PROJECT_NAME.capitalize()}")
 
     tab1, tab2, tab3  = st.tabs(
-        ["Projekt zmiany w issues", "Animator", "Blacklist"]
+        ["Otwarte Issues", "Zmiany w Issues", "Blacklist"]
     )
     with tab1:
         if st.button("Znajdź taski projektu"):
             try:
-                issues = jira.get_project_open_issues()
+                project_df = get_project_open_issues_df()
+                if project_df.empty:
+                    st.info("Brak tasków.")
+                else:
+                    # ruff: noqa: E501
+                    st.dataframe(project_df,
+                                 use_container_width=True,
+                                 column_config={"name": st.column_config.TextColumn(label="Issue"),
+                                                "issue_link": st.column_config.LinkColumn(label="Link", width="small",
+                                                                                          max_chars=12, display_text=r"https://jira\.gpd\.com\.pl/browse/([^/]+)"),
+                                                "description": st.column_config.TextColumn(label="Description", width="large", max_chars=120, help="Kliknij, aby rozwinąć"),
+                                                "deadline": st.column_config.DatetimeColumn(label="Deadline", format="DD/MM/YYYY HH:MM"),
+                                                "attachments": st.column_config.ListColumn(label="Załączniki z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
+                                                "count_attachments": st.column_config.NumberColumn(label="SUM"),
+                                                "comments": st.column_config.ListColumn(label="Komentarze z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
+                                                "count_comments": st.column_config.NumberColumn(label="SUM"),
+                                                },
+                                 hide_index=True
+                                 )
+                    # ruff: enable=E501
+
+            except Exception as e:
+                st.error(f"Błąd podczas wyszukiwania: {e}")
+
+    with tab2:
+        if st.button("Znajdź zmiany w taskach"):
+            try:
+                issues = None
                 if not issues:
-                    st.info("Brak tasków do cleanupu.")
+                    st.info("Brak tasków")
                 else:
                     project_df = pd.DataFrame(issues)
                     project_df.drop(columns=["current_timestamp"], axis=1, inplace=True)
@@ -56,12 +104,18 @@ def main() -> None:
                                  use_container_width=True,
                                  column_config={"name": st.column_config.TextColumn(label="Issue"),
                                                 "issue_link": st.column_config.LinkColumn(label="Link", width="small",
-                                                                                          max_chars=12, display_text=r"https://jira\.gpd\.com\.pl/browse/([^/]+)"),
-                                                "description": st.column_config.TextColumn(label="Description", width="large", max_chars=120, help="Kliknij, aby rozwinąć"),
-                                                "deadline": st.column_config.DatetimeColumn(label="Deadline", format="DD/MM/YYYY HH:MM"),
-                                                "attachments": st.column_config.ListColumn(label="Załączniki z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
+                                                                                          max_chars=12,
+                                                                                          display_text=r"https://jira\.gpd\.com\.pl/browse/([^/]+)"),
+                                                "description": st.column_config.TextColumn(label="Description",
+                                                                                           width="large", max_chars=120,
+                                                                                           help="Kliknij, aby rozwinąć"),
+                                                "deadline": st.column_config.DatetimeColumn(label="Deadline",
+                                                                                            format="DD/MM/YYYY HH:MM"),
+                                                "attachments": st.column_config.ListColumn(
+                                                    label="Załączniki z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
                                                 "count_attachments": st.column_config.NumberColumn(label="SUM"),
-                                                "comments": st.column_config.ListColumn(label="Komentarze z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
+                                                "comments": st.column_config.ListColumn(
+                                                    label="Komentarze z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
                                                 "count_comments": st.column_config.NumberColumn(label="SUM"),
                                                 },
                                  hide_index=True
@@ -70,49 +124,6 @@ def main() -> None:
 
             except Exception as e:
                 st.error(f"Błąd podczas wyszukiwania: {e}")
-
-    with tab2:
-        st.header("Znajdź ID użytkownika JIRA")
-        name = st.text_input("Wpisz nazwę użytkownika")
-
-        author_options = [a.strip() for a in LIST_OF_AUTHORS.split("'") if a.strip() and "," not in a]
-        selected_author = st.selectbox("Lub wybierz użytkownika z listy:", [""] + author_options)
-
-        if selected_author:
-            name = selected_author
-
-        if st.button("Sprawdź ID"):
-            if name.strip():
-                try:
-                    user_name = jira.find_user_id(name)
-                    st.success(f"Użytkownik: {user_name} istnieje.")
-                except Exception as e:
-                    st.error(f"Błąd podczas wyszukiwania: {e}")
-            else:
-                st.warning("Wprowadź nazwę użytkownika przed kliknięciem przycisku.")
-
-        if st.button("Znajdź taski do cleanupu po użytkowniku"):
-            if name.strip():
-                try:
-                    cleanup_tasks = jira.get_issues_by_artist(name)
-                    if not cleanup_tasks:
-                        st.info("Brak tasków do cleanupu.")
-                    else:
-                        df = pd.DataFrame(cleanup_tasks)
-                        df = df.sort_values(by=['deadline'], ascending=False)
-                        st.dataframe(df,
-                                     use_container_width=True,
-                                     column_config={"issue_link": st.column_config.LinkColumn(),
-                                                    "deadline": st.column_config.DatetimeColumn(
-                                                        format="DD/MM/YYYY HH:MM"),
-                                                    "animation_date": st.column_config.DatetimeColumn(
-                                                        format="DD/MM/YYYY HH:MM"),
-                                                    }
-                                     )
-                except Exception as e:
-                    st.error(f"Błąd podczas wyszukiwania: {e}")
-            else:
-                st.warning("Wprowadź nazwę użytkownika przed kliknięciem przycisku.")
 
     with tab3:
         st.header("Blacklist – nielistowane taski")

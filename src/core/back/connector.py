@@ -71,7 +71,7 @@ class JiraConnector:
         jql_request = f'project = {PROJECT_NAME} AND status != Closed'
         issues = self.connector.jql(jql_request).get("issues", {})  # type: ignore[union-attr]
 
-        response: dict[str, Any] = {}  #mupy calmer
+        response: dict[str, Any] = dict() #mypy calmer
         list_of_responses = list()
         for issue in issues:
             response = dict()
@@ -110,16 +110,7 @@ class JiraConnector:
                 }
                 for comment in comments_raw
             ]
-            filter_date = pendulum.now(tz='Europe/Warsaw').add(days=-3)
-            filtered_sorted_comments = sorted(
-                (c for c in comments if c["created"] > filter_date or c["updated"] > filter_date),
-                key=lambda x: x["updated"],
-                reverse=True
-            )
-
-            response['comments'] = [
-                f"{c['author']} | {c['body']} | {c['url']}" for c in filtered_sorted_comments
-            ]
+            response['comments'] = comments
 
             attachments_raw = issue.get('fields', {}).get('attachment', [])
             attachments = [
@@ -132,14 +123,37 @@ class JiraConnector:
                 for attachment in attachments_raw
             ]
 
+            response['attachments'] = attachments
+
+            list_of_responses.append(response)
+
+        return list_of_responses
+
+
+    def get_project_open_issues_filtered(self) -> list[dict[str, Any]]:
+        filter_date = pendulum.now(tz='Europe/Warsaw').add(days=-3)
+        response = self.get_project_open_issues()
+
+        for line in response:
+            line.pop('current_timestamp')
+
+            comments = line['comments']
+            filtered_sorted_comments = sorted(
+                (c for c in comments if c["created"] > filter_date or c["updated"] > filter_date),
+                key=lambda x: x["updated"],
+                reverse=True
+            )
+            line['comments'] = [
+                f"{c['author']} | {c['body']} | {c['url']}" for c in filtered_sorted_comments
+            ]
+
+            attachments = line['attachments']
             filtered_sorted_attachments = sorted(
                 (a for a in attachments if a["created"] > filter_date),
                 key=lambda x: x["created"],
                 reverse=True
             )
 
-            response['attachments'] = [f"[{att['name']}]({att['url']})" for att in filtered_sorted_attachments]
+            line['attachments'] = [f"[{att['name']}]({att['url']})" for att in filtered_sorted_attachments]
 
-            list_of_responses.append(response)
-
-        return list_of_responses
+        return response
