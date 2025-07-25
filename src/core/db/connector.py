@@ -51,3 +51,30 @@ class SQLiteConnector:
             except Exception as e:
                 logger.error(e)
         self.conn.commit()
+
+    def get_closest_past_snapshot(self, issue_key: str, reference_time: str | pendulum.DateTime | None) \
+            -> dict[str, Any] | None:
+        assert self.cursor is not None
+        assert self.conn is not None
+
+        if reference_time is None:
+            reference_time = pendulum.now().subtract(days=1).to_iso8601_string()
+        elif hasattr(reference_time, "to_iso8601_string"):
+            reference_time = reference_time.to_iso8601_string()
+        else:
+            reference_time = str(reference_time)
+
+        self.cursor.execute(
+            '''
+            SELECT payload_json FROM issue_snapshots
+            WHERE issue_key = ? AND snapshot_datetime <= ?
+            ORDER BY snapshot_datetime DESC
+            LIMIT 1
+            ''',
+            (issue_key, reference_time)
+        )
+
+        row = self.cursor.fetchone()
+        if row:
+            return json.loads(row[0])
+        return None

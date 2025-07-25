@@ -118,7 +118,7 @@ class JiraConnector:
                     "id": attachment.get("id"),
                     "name": attachment.get("filename"),
                     "url": attachment.get("self"),
-                    "created": pendulum.parse(attachment.get("created")).in_timezone("Europe/Warsaw")
+                    "created": pendulum.parse(attachment.get("created")).in_timezone("Europe/Warsaw")  # type: ignore[union-attr]
                 }
                 for attachment in attachments_raw
             ]

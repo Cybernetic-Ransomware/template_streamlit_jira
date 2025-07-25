@@ -75,52 +75,51 @@ def main() -> None:
                 st.error(f"Błąd podczas wyszukiwania: {e}")
 
     with tab2:
-        if st.button("Znajdź zmiany w taskach"):
+        if st.button("Znajdź zmiany względem ostatniego snapshotu"):
             try:
-                issues = None
-                if not issues:
-                    st.info("Brak tasków")
+                project_dict = jira.get_project_open_issues()
+                project_df = pd.DataFrame(project_dict)
+                if project_df.empty:
+                    st.info("Brak tasków.")
                 else:
-                    project_df = pd.DataFrame(issues)
-                    project_df.drop(columns=["current_timestamp"], axis=1, inplace=True)
-                    project_df['count_attachments'] = project_df['attachments'].apply(lambda x: len(x))
-                    project_df['count_comments'] = project_df['comments'].apply(lambda x: len(x))
+                    diff_list = []
 
-                    # changing sum columns order
-                    cols = project_df.columns.tolist()
+                    with SQLiteConnector() as db_connector:
+                        for _, row in project_df.iterrows():
+                            issue_key = row['issue_link']
+                            snap_dict = db_connector.get_closest_past_snapshot(issue_key, None)
 
-                    attachments_index = cols.index("attachments")
-                    cols.remove("count_attachments")
-                    cols.insert(attachments_index + 1, "count_attachments")
+                            if not snap_dict:
+                                continue
 
-                    comments_index = cols.index("comments")
-                    cols.remove("count_comments")
-                    cols.insert(comments_index + 1, "count_comments")
+                            current = row.to_dict()
 
-                    project_df = project_df[cols]
+                            diff = {
+                                "name": current.get("name"),
+                                "issue_link": issue_key,
+                            }
 
-                    # ruff: noqa: E501
-                    st.dataframe(project_df,
-                                 use_container_width=True,
-                                 column_config={"name": st.column_config.TextColumn(label="Issue"),
-                                                "issue_link": st.column_config.LinkColumn(label="Link", width="small",
-                                                                                          max_chars=12,
-                                                                                          display_text=r"https://jira\.gpd\.com\.pl/browse/([^/]+)"),
-                                                "description": st.column_config.TextColumn(label="Description",
-                                                                                           width="large", max_chars=120,
-                                                                                           help="Kliknij, aby rozwinąć"),
-                                                "deadline": st.column_config.DatetimeColumn(label="Deadline",
-                                                                                            format="DD/MM/YYYY HH:MM"),
-                                                "attachments": st.column_config.ListColumn(
-                                                    label="Załączniki z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
-                                                "count_attachments": st.column_config.NumberColumn(label="SUM"),
-                                                "comments": st.column_config.ListColumn(
-                                                    label="Komentarze z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
-                                                "count_comments": st.column_config.NumberColumn(label="SUM"),
-                                                },
-                                 hide_index=True
-                                 )
-                    # ruff: enable=E501
+                            for field in ["description", "deadline"]:
+                                if current.get(field) != snap_dict.get(field):
+                                    diff[field] = f"{snap_dict.get(field)} → {current.get(field)}"
+
+                            old_comments = snap_dict.get("comments", [])
+                            new_comments = current.get("comments", [])
+                            if len(old_comments) != len(new_comments):
+                                diff["comments_count"] = f"{len(old_comments)} → {len(new_comments)}"
+
+                            old_attach = snap_dict.get("attachments", [])
+                            new_attach = current.get("attachments", [])
+                            if len(old_attach) != len(new_attach):
+                                diff["attachments_count"] = f"{len(old_attach)} → {len(new_attach)}"
+
+                            if len(diff) > 2:
+                                diff_list.append(diff)
+
+                    if not diff_list:
+                        st.success("Brak zmian względem ostatnich snapshotów.")
+                    else:
+                        st.dataframe(pd.DataFrame(diff_list))
 
             except Exception as e:
                 st.error(f"Błąd podczas wyszukiwania: {e}")
