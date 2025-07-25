@@ -1,4 +1,6 @@
 import json
+import re
+from typing import Any
 
 import pendulum
 import urllib3
@@ -65,20 +67,74 @@ class JiraConnector:
 
         return list_of_responses
 
-    def get_project_open_issues(self) -> list[dict[str, str]]:
+    def get_project_open_issues(self) -> list[dict[str, Any]]:
         jql_request = f'project = {PROJECT_NAME} AND status != Closed'
         issues = self.connector.jql(jql_request).get("issues", {})  # type: ignore[union-attr]
 
+        response: dict[str, Any] = {}  #mupy calmer
         list_of_responses = list()
-        response = dict()
         for issue in issues:
+            response = dict()
+            current_timestamp = pendulum.now(tz='Europe/Warsaw')
+            response['current_timestamp'] = current_timestamp
+
             issue_name = issue.get('fields').get('summary')
             response['name'] = issue_name
+
+            issue_link = JIRA_SERVER + r'browse/' + str(issue.get('key'))
+            response['issue_link'] = issue_link
 
             description = issue.get('fields').get('description')
             response['description'] = description
 
-            list_of_responses.append(response)
-            response = dict()
+            deadline = issue.get('fields').get('customfield_11200', None)
+            if deadline:
+                deadline_ts = pendulum.from_format(deadline, 'YYYY-MM-DDTHH:mm:ss.SSSZ', tz='Europe/Warsaw', locale='pl')
+                # response['deadline'] = deadline_ts.strftime("%d/%m/%Y %H:%M")
+                response['deadline'] = deadline_ts
+            else:
+                response['deadline'] = None
 
+            response['attachments'] = list()
+            response['comments'] = list()
+
+            comments_raw = issue.get('fields', {}).get('comment', {}).get('comments', [])
+            comments = [
+                {
+                    "id": comment.get("id"),
+                    "author": comment.get("author", {}).get("name", ""),
+                    "url": comment.get("self", ""),
+                    "body": re.sub(r'\[~.*?\]', '', comment.get("body"))[:24],
+                    "created":  pendulum.parse(comment.get("created")).in_timezone("Europe/Warsaw"),  # type: ignore[union-attr]
+                    "updated":  pendulum.parse(comment.get("updated")).in_timezone("Europe/Warsaw")  # type: ignore[union-attr]
+                }
+                for comment in comments_raw
+            ]
+            filter_date = pendulum.now(tz='Europe/Warsaw').add(days=-3)
+            filtered_sorted = sorted(
+                (c for c in comments if c["created"] > filter_date or c["updated"] > filter_date),
+                key=lambda x: x["updated"],
+                reverse=True
+            )
+
+            response['comments'] = [
+                f"{c['author']} | {c['body']} | {c['url']}" for c in filtered_sorted
+            ]
+            # response['comments'] = comments
+
+            attachments_raw = issue.get('fields', {}).get('attachment', [])
+            attachments = [
+                {
+                    "id": attachment.get("id"),
+                    "name": attachment.get("filename"),
+                    "url": attachment.get("self")
+                }
+                for attachment in attachments_raw
+            ]
+            response['attachments'] = [f"[{att['name']}]({att['url']})" for att in attachments]
+            # response['attachments'] = "\n".join(f"[{att['name']}]({att['url']})" for att in attachments)
+
+            list_of_responses.append(response)
+
+        # print(list_of_responses, flush=True)
         return list_of_responses

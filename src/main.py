@@ -6,7 +6,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 import pandas as pd
 import streamlit as st
 
-from src.config.config import JIRA_SERVER, JIRA_TOKEN, LIST_OF_AUTHORS
+from src.config.config import JIRA_SERVER, JIRA_TOKEN, LIST_OF_AUTHORS, PROJECT_NAME
 from src.core.back.connector import JiraConnector
 from src.core.db.connector import SQLiteConnector
 
@@ -21,7 +21,7 @@ jira = get_jira_connector()
 
 
 def main() -> None:
-    st.title("Stack of cleanups")
+    st.title(f"Comparisons project: {PROJECT_NAME.capitalize()}")
 
     tab1, tab2, tab3  = st.tabs(
         ["Projekt zmiany w issues", "Animator", "Blacklist"]
@@ -34,14 +34,23 @@ def main() -> None:
                     st.info("Brak tasków do cleanupu.")
                 else:
                     project_df = pd.DataFrame(issues)
-                    print(project_df, flush=True)
+                    project_df.drop(columns=["current_timestamp"], axis=1, inplace=True)
+                    # print(project_df.head(), flush=True)
+
+                    # ruff: noqa: E501
                     st.dataframe(project_df,
                                  use_container_width=True,
-                                 column_config={"issue_link": st.column_config.LinkColumn(),
-                                                "deadline": st.column_config.DatetimeColumn(format="DD/MM/YYYY HH:MM"),
-                                                "animation_date": st.column_config.DatetimeColumn(format="DD/MM/YYYY HH:MM"),  #noqa E501
-                                                }
+                                 column_config={"name": st.column_config.TextColumn(label="Issue"),
+                                                "issue_link": st.column_config.LinkColumn(label="Link", width="small",
+                                                                                          max_chars=12, display_text=r"https://jira\.gpd\.com\.pl/browse/([^/]+)"),
+                                                "description": st.column_config.TextColumn(label="Description", width="large", max_chars=120, help="Kliknij, aby rozwinąć"),
+                                                "deadline": st.column_config.DatetimeColumn(label="Deadline", format="DD/MM/YYYY HH:MM"),
+                                                "attachments": st.column_config.ListColumn(label="Załączniki", help="Kliknij, aby rozwinąć"),
+                                                "comments": st.column_config.ListColumn(label="Komentarze z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
+                                                },
+                                 hide_index=True
                                  )
+                    # ruff: enable=E501
 
             except Exception as e:
                 st.error(f"Błąd podczas wyszukiwania: {e}")
