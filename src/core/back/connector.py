@@ -111,30 +111,35 @@ class JiraConnector:
                 for comment in comments_raw
             ]
             filter_date = pendulum.now(tz='Europe/Warsaw').add(days=-3)
-            filtered_sorted = sorted(
+            filtered_sorted_comments = sorted(
                 (c for c in comments if c["created"] > filter_date or c["updated"] > filter_date),
                 key=lambda x: x["updated"],
                 reverse=True
             )
 
             response['comments'] = [
-                f"{c['author']} | {c['body']} | {c['url']}" for c in filtered_sorted
+                f"{c['author']} | {c['body']} | {c['url']}" for c in filtered_sorted_comments
             ]
-            # response['comments'] = comments
 
             attachments_raw = issue.get('fields', {}).get('attachment', [])
             attachments = [
                 {
                     "id": attachment.get("id"),
                     "name": attachment.get("filename"),
-                    "url": attachment.get("self")
+                    "url": attachment.get("self"),
+                    "created": pendulum.parse(attachment.get("created")).in_timezone("Europe/Warsaw")
                 }
                 for attachment in attachments_raw
             ]
-            response['attachments'] = [f"[{att['name']}]({att['url']})" for att in attachments]
-            # response['attachments'] = "\n".join(f"[{att['name']}]({att['url']})" for att in attachments)
+
+            filtered_sorted_attachments = sorted(
+                (a for a in attachments if a["created"] > filter_date),
+                key=lambda x: x["created"],
+                reverse=True
+            )
+
+            response['attachments'] = [f"[{att['name']}]({att['url']})" for att in filtered_sorted_attachments]
 
             list_of_responses.append(response)
 
-        # print(list_of_responses, flush=True)
         return list_of_responses

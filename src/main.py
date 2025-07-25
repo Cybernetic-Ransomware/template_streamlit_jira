@@ -35,7 +35,21 @@ def main() -> None:
                 else:
                     project_df = pd.DataFrame(issues)
                     project_df.drop(columns=["current_timestamp"], axis=1, inplace=True)
-                    # print(project_df.head(), flush=True)
+                    project_df['count_attachments'] = project_df['attachments'].apply(lambda x: len(x))
+                    project_df['count_comments'] = project_df['comments'].apply(lambda x: len(x))
+
+                    # changing sum columns order
+                    cols = project_df.columns.tolist()
+
+                    attachments_index = cols.index("attachments")
+                    cols.remove("count_attachments")
+                    cols.insert(attachments_index + 1, "count_attachments")
+
+                    comments_index = cols.index("comments")
+                    cols.remove("count_comments")
+                    cols.insert(comments_index + 1, "count_comments")
+
+                    project_df = project_df[cols]
 
                     # ruff: noqa: E501
                     st.dataframe(project_df,
@@ -45,8 +59,10 @@ def main() -> None:
                                                                                           max_chars=12, display_text=r"https://jira\.gpd\.com\.pl/browse/([^/]+)"),
                                                 "description": st.column_config.TextColumn(label="Description", width="large", max_chars=120, help="Kliknij, aby rozwinąć"),
                                                 "deadline": st.column_config.DatetimeColumn(label="Deadline", format="DD/MM/YYYY HH:MM"),
-                                                "attachments": st.column_config.ListColumn(label="Załączniki", help="Kliknij, aby rozwinąć"),
+                                                "attachments": st.column_config.ListColumn(label="Załączniki z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
+                                                "count_attachments": st.column_config.NumberColumn(label="SUM"),
                                                 "comments": st.column_config.ListColumn(label="Komentarze z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
+                                                "count_comments": st.column_config.NumberColumn(label="SUM"),
                                                 },
                                  hide_index=True
                                  )
