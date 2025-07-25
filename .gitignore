@@ -161,3 +161,4 @@ cython_debug/
 # logs
 /log/*
 /log/*.log
+/src/core/db/temp/baza.db

@@ -45,7 +45,7 @@ def main() -> None:
     st.title(f"Comparisons project: {PROJECT_NAME.capitalize()}")
 
     tab1, tab2, tab3  = st.tabs(
-        ["Otwarte Issues", "Zmiany w Issues", "Blacklist"]
+        ["Otwarte Issues", "Zmiany w Issues", "Manual_snapshot"]
     )
     with tab1:
         if st.button("Znajdź taski projektu"):
@@ -126,7 +126,17 @@ def main() -> None:
                 st.error(f"Błąd podczas wyszukiwania: {e}")
 
     with tab3:
-        st.header("Blacklist – nielistowane taski")
+        st.header("Snapshot")
+
+        if st.button("Manual snapshot"):
+            try:
+                snapshot = jira.get_project_open_issues()
+                with SQLiteConnector() as db_connector:
+                    db_connector.snapshot_issues_to_db(snapshot)
+
+            except Exception as e:
+                st.error(f"Błąd podczas przepisywania snapshota: {e}")
+
 
         if "blacklist" not in st.session_state:
             try:
@@ -137,32 +147,6 @@ def main() -> None:
             except Exception as e:
                 st.error(f"Błąd podczas pobierania blacklisty: {e}")
                 st.session_state.blacklist = []
-
-        blacklist = st.session_state.blacklist
-
-        if not blacklist:
-            st.info("Brak zablokowanych tasków.")
-        else:
-            df_blacklist = pd.DataFrame(blacklist, columns=["ID", "Name"])
-
-            for i in df_blacklist.index:
-                id_ = df_blacklist.loc[i, "ID"]
-                name = df_blacklist.loc[i, "Name"]
-                short_name = name[:5]
-
-                col1, col2 = st.columns([5, 1])
-                with col1:
-                    st.markdown(f"- **{name}**")
-                with col2:
-                    if st.button(f"Usuń filtr na {short_name}", key=f"remove_{id_}"):
-                        try:
-                            with SQLiteConnector() as db_connector:
-                                db_connector.remove_by_id(int(id_))
-                                st.success(f"Usunięto z blacklisty: {name}")
-                                st.session_state.blacklist = db_connector.fetch_all()
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Błąd podczas usuwania z blacklisty: {e}")
 
 if __name__ == '__main__':
     main()

@@ -1,7 +1,14 @@
+import json
 import sqlite3
 from pathlib import Path
+from typing import Any
 
-from src.core.db.sql import CREATE_TABLE
+import pendulum
+
+from src.config.conf_logger import setup_logger
+from src.core.db.sql import CREATE_TABLE, SAVE_SNAPSHOT
+
+logger = setup_logger(__name__, "sqlite")
 
 
 class SQLiteConnector:
@@ -30,25 +37,17 @@ class SQLiteConnector:
             self.conn = None
             self.cursor = None
 
-    def insert_issue(self, name: str):
+    def snapshot_issues_to_db(self, issues: list[dict[str, Any]]):
         assert self.cursor is not None
         assert self.conn is not None
 
-        self.cursor.execute(r"INSERT INTO blacklist (name) VALUES (?)", (name,))
+        now = pendulum.now(tz='Europe/Warsaw').to_iso8601_string()
+
+        for issue in issues:
+            try:
+                issue_key = issue.get("issue_link", "").split("/")[-1]
+                payload = json.dumps(issue, default=str)
+                self.cursor.execute(SAVE_SNAPSHOT, (issue_key, now, payload))
+            except Exception as e:
+                logger.error(e)
         self.conn.commit()
-
-    def remove_by_id(self, record_id: int) -> bool:
-        assert self.cursor is not None
-        assert self.conn is not None
-
-        self.cursor.execute(
-            "SELECT * FROM blacklist WHERE id = ?", (record_id,)
-        ).fetchall()
-        self.cursor.execute("DELETE FROM blacklist WHERE id = ?", (record_id,))
-        self.conn.commit()
-
-        return self.cursor.rowcount > 0
-
-    def fetch_all(self):
-        self.cursor.execute(r"SELECT * FROM blacklist")
-        return self.cursor.fetchall()
