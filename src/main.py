@@ -1,3 +1,4 @@
+import difflib
 import sys
 from pathlib import Path
 
@@ -86,7 +87,7 @@ def main() -> None:
 
                     with SQLiteConnector() as db_connector:
                         for _, row in project_df.iterrows():
-                            issue_key = row['issue_link']
+                            issue_key = row['issue_link'].split("/")[-1]
                             snap_dict = db_connector.get_closest_past_snapshot(issue_key, None)
 
                             if not snap_dict:
@@ -99,9 +100,23 @@ def main() -> None:
                                 "issue_link": issue_key,
                             }
 
-                            for field in ["description", "deadline"]:
-                                if current.get(field) != snap_dict.get(field):
+                            for field in ["deadline"]:
+                                if str(current.get(field)) != str(snap_dict.get(field)):
                                     diff[field] = f"{snap_dict.get(field)} → {current.get(field)}"
+
+                            for field in ["description"]:
+                                old = str(snap_dict.get(field)).splitlines()
+                                new = str(current.get(field)).splitlines()
+
+                                if old != new:
+                                    diff_lines = list(difflib.unified_diff(
+                                        old,
+                                        new,
+                                        fromfile='poprzedni snap',
+                                        tofile='obecnie jira',
+                                        lineterm=''
+                                    ))
+                                    diff[field] = "\n".join(diff_lines)
 
                             old_comments = snap_dict.get("comments", [])
                             new_comments = current.get("comments", [])
@@ -115,6 +130,8 @@ def main() -> None:
 
                             if len(diff) > 2:
                                 diff_list.append(diff)
+
+                            # print(diff, flush=True)
 
                     if not diff_list:
                         st.success("Brak zmian względem ostatnich snapshotów.")
