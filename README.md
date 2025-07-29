@@ -79,5 +79,5 @@ uvx mypy .\src\
 
 ## Useful links and documentation
 - Jira Atlassian Python API: [Atlassian](https://atlassian-python-api.readthedocs.io/jira.html)
-- Deploy Streamlit using Docker: [TimescaleDB](https://docs.streamlit.io/deploy/tutorials/docker)
+- Deploy Streamlit using Docker: [Streamlit](https://docs.streamlit.io/deploy/tutorials/docker)
 - Advanced JQL searching: [Atlassian](https://confluence.atlassian.com/jirasoftwareserver0822/advanced-searching-1142432445.html)
