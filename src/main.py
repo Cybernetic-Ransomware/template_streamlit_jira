@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
+import pendulum
 import streamlit as st
 
 from src.config.config import JIRA_SERVER, JIRA_TOKEN, PROJECT_NAME
@@ -76,70 +77,95 @@ def main() -> None:
                 st.error(f"Błąd podczas wyszukiwania: {e}")
 
     with tab2:
-        if st.button("Znajdź zmiany względem ostatniego snapshotu"):
+        if "project_df" not in st.session_state:
+            st.session_state.project_df = pd.DataFrame()
+
+        if "selected_key" not in st.session_state:
+            st.session_state.selected_key = None
+
+        if "diff_list" not in st.session_state:
+            st.session_state.diff_list = []
+
+        snapshot_mapping = {
+            "last_one": lambda: pendulum.now().to_iso8601_string(),
+            "first_yesterday": lambda: pendulum.yesterday().to_iso8601_string(),
+            "first_three_days_ago": lambda: pendulum.today().subtract(days=3).to_iso8601_string(),
+        }
+
+        tab2_col1, tab2_col2, tab2_col3 = st.columns(3)
+
+        with tab2_col1:
+            if st.button("Znajdź zmiany względem ostatniego snapshotu"):
+                st.session_state.selected_key = "last_one"
+        with tab2_col2:
+            if st.button("Znajdź zmiany względem pierwszego wczoraj"):
+                st.session_state.selected_key = "first_yesterday"
+        with tab2_col3:
+            if st.button("Znajdź zmiany względem pierwszego sprzed trzech dni"):
+                st.session_state.selected_key = "first_three_days_ago"
+
+        if st.session_state.selected_key:
             try:
                 project_dict = jira.get_project_open_issues()
-                project_df = pd.DataFrame(project_dict)
-                if project_df.empty:
+                st.session_state.project_df = pd.DataFrame(project_dict)
+
+                if st.session_state.project_df.empty:
                     st.info("Brak tasków.")
+                    st.session_state.diff_list = []
                 else:
                     diff_list = []
-
                     with SQLiteConnector() as db_connector:
-                        for _, row in project_df.iterrows():
+                        date_to_compare = snapshot_mapping[st.session_state.selected_key]()
+
+                        for _, row in st.session_state.project_df.iterrows():
                             issue_key = row['issue_link'].split("/")[-1]
-                            snap_dict = db_connector.get_closest_past_snapshot(issue_key, None)
+                            snap_dict = db_connector.get_closest_past_snapshot(issue_key, date_to_compare)
 
                             if not snap_dict:
                                 continue
 
                             current = row.to_dict()
-
                             diff = {
                                 "name": current.get("name"),
                                 "issue_link": issue_key,
                             }
 
-                            for field in ["deadline"]:
-                                if str(current.get(field)) != str(snap_dict.get(field)):
-                                    diff[field] = f"{snap_dict.get(field)} → {current.get(field)}"
+                            if str(current.get("deadline")) != str(snap_dict.get("deadline")):
+                                diff["deadline"] = f"{snap_dict.get('deadline')} → {current.get('deadline')}"
 
-                            for field in ["description"]:
-                                old = str(snap_dict.get(field)).splitlines()
-                                new = str(current.get(field)).splitlines()
+                            old_desc = str(snap_dict.get("description")).splitlines()
+                            new_desc = str(current.get("description")).splitlines()
+                            if old_desc != new_desc:
+                                diff_lines = list(difflib.unified_diff(
+                                    old_desc,
+                                    new_desc,
+                                    fromfile='poprzedni snap',
+                                    tofile='obecnie jira',
+                                    lineterm=''
+                                ))
+                                diff["description"] = "\n".join(diff_lines)
 
-                                if old != new:
-                                    diff_lines = list(difflib.unified_diff(
-                                        old,
-                                        new,
-                                        fromfile='poprzedni snap',
-                                        tofile='obecnie jira',
-                                        lineterm=''
-                                    ))
-                                    diff[field] = "\n".join(diff_lines)
+                            if len(snap_dict.get("comments", [])) != len(current.get("comments", [])):
+                                diff[
+                                    "comments_count"] = f"{len(snap_dict.get('comments', []))} → {len(current.get('comments', []))}"
 
-                            old_comments = snap_dict.get("comments", [])
-                            new_comments = current.get("comments", [])
-                            if len(old_comments) != len(new_comments):
-                                diff["comments_count"] = f"{len(old_comments)} → {len(new_comments)}"
-
-                            old_attach = snap_dict.get("attachments", [])
-                            new_attach = current.get("attachments", [])
-                            if len(old_attach) != len(new_attach):
-                                diff["attachments_count"] = f"{len(old_attach)} → {len(new_attach)}"
+                            if len(snap_dict.get("attachments", [])) != len(current.get("attachments", [])):
+                                diff[
+                                    "attachments_count"] = f"{len(snap_dict.get('attachments', []))} → {len(current.get('attachments', []))}"
 
                             if len(diff) > 2:
                                 diff_list.append(diff)
 
-                            # print(diff, flush=True)
-
-                    if not diff_list:
-                        st.success("Brak zmian względem ostatnich snapshotów.")
-                    else:
-                        st.dataframe(pd.DataFrame(diff_list))
+                    st.session_state.diff_list = diff_list
 
             except Exception as e:
                 st.error(f"Błąd podczas wyszukiwania: {e}")
+
+        if not st.session_state.project_df.empty:
+            if not st.session_state.diff_list:
+                st.success("Brak zmian względem wybranego snapshotu.")
+            else:
+                st.dataframe(pd.DataFrame(st.session_state.diff_list))
 
     with tab3:
         st.header("Snapshot")
