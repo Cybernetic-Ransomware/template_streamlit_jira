@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     build-essential \
     curl \
     software-properties-common \
+    tzdata \
+    cron \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get purge -y build-essential
@@ -28,8 +30,21 @@ EXPOSE 8501/tcp
 
 #CMD ["tail", "-f", "/dev/null"]
 
-CMD ["streamlit", "run", "main.py", \
-     "--server.port", "8501", \
-     "--server.address", "0.0.0.0", \
-     "--server.enableCORS", "false", \
-     "--server.headless", "true"]
+COPY docker/crontab /etc/cron.d/snapshooter-cron
+RUN chmod 0644 /etc/cron.d/snapshooter-cron && \
+    crontab /etc/cron.d/snapshooter-cron
+
+#CMD ["streamlit", "run", "main.py", \
+#     "--server.port", "8501", \
+#     "--server.address", "0.0.0.0", \
+#     "--server.enableCORS", "false", \
+#     "--server.headless", "true"]
+
+CMD bash -c "\
+    cron -f & \
+    streamlit run main.py \
+        --server.port 8501 \
+        --server.address 0.0.0.0 \
+        --server.enableCORS false \
+        --server.headless true \
+"

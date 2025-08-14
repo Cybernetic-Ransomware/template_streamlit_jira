@@ -62,11 +62,15 @@ def main() -> None:
                                  column_config={"name": st.column_config.TextColumn(label="Issue"),
                                                 "issue_link": st.column_config.LinkColumn(label="Link", width="small",
                                                                                           max_chars=12, display_text=r"https://jira\.gpd\.com\.pl/browse/([^/]+)"),
-                                                "description": st.column_config.TextColumn(label="Description", width="large", max_chars=120, help="Kliknij, aby rozwinąć"),
-                                                "deadline": st.column_config.DatetimeColumn(label="Deadline", format="DD/MM/YYYY HH:MM"),
-                                                "attachments": st.column_config.ListColumn(label="Załączniki z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
+                                                "description": st.column_config.TextColumn(label="Description", width="large",
+                                                                                           max_chars=120, help="Kliknij, aby rozwinąć"),
+                                                "deadline": st.column_config.DatetimeColumn(label="Deadline",
+                                                                                            format="DD/MM/YYYY HH:MM"),
+                                                "attachments": st.column_config.ListColumn(label="Załączniki z ostatnich 3 dni",
+                                                                                           help="Kliknij, aby rozwinąć"),
                                                 "count_attachments": st.column_config.NumberColumn(label="SUM"),
-                                                "comments": st.column_config.ListColumn(label="Komentarze z ostatnich 3 dni", help="Kliknij, aby rozwinąć"),
+                                                "comments": st.column_config.ListColumn(label="Komentarze z ostatnich 3 dni",
+                                                                                        help="Kliknij, aby rozwinąć"),
                                                 "count_comments": st.column_config.NumberColumn(label="SUM"),
                                                 },
                                  hide_index=True
@@ -127,11 +131,15 @@ def main() -> None:
                             current = row.to_dict()
                             diff = {
                                 "name": current.get("name"),
-                                "issue_link": issue_key,
+                                "issue_link": row['issue_link'],
+                                "snap_time": snap_dict.get("current_timestamp", None)
                             }
+                            template_diff_count = len(diff)
 
                             if str(current.get("deadline")) != str(snap_dict.get("deadline")):
-                                diff["deadline"] = f"{snap_dict.get('deadline')} → {current.get('deadline')}"
+                                snap_date = pendulum.parse(snap_dict.get('deadline')).format('YY/MM/DD HH:mm')
+                                current_date = current.get('deadline').format('YY/MM/DD HH:mm')
+                                diff["deadline"] = f"{snap_date} → {current_date}"
 
                             old_desc = str(snap_dict.get("description")).splitlines()
                             new_desc = str(current.get("description")).splitlines()
@@ -153,7 +161,7 @@ def main() -> None:
                                 diff[
                                     "attachments_count"] = f"{len(snap_dict.get('attachments', []))} → {len(current.get('attachments', []))}"
 
-                            if len(diff) > 2:
+                            if len(diff) > template_diff_count:
                                 diff_list.append(diff)
 
                     st.session_state.diff_list = diff_list
@@ -165,7 +173,26 @@ def main() -> None:
             if not st.session_state.diff_list:
                 st.success("Brak zmian względem wybranego snapshotu.")
             else:
-                st.dataframe(pd.DataFrame(st.session_state.diff_list))
+                # ruff: noqa: E501
+                st.dataframe(pd.DataFrame(st.session_state.diff_list),
+                             use_container_width=True,
+                             column_config={"name": st.column_config.TextColumn(label="Issue"),
+                                            "issue_link": st.column_config.LinkColumn(label="Link", width="small",
+                                                                                      max_chars=12, display_text=r"https://jira\.gpd\.com\.pl/browse/([^/]+)"),
+                                            "snap_time": st.column_config.DatetimeColumn(label="Czas zapisanego snapa",
+                                                                                        format="DD/MM/YYYY HH:MM"),
+                                            "deadline": st.column_config.TextColumn(label="Deadline",
+                                                                                    width="small", max_chars=35),
+                                            "comments_count": st.column_config.TextColumn(label="Ilość komentarzy",
+                                                                                          width="small", max_chars=14),
+                                            "attachments_count": st.column_config.TextColumn(label="Ilość załączników",
+                                                                                             width="small", max_chars=12),
+                                            "description": st.column_config.TextColumn(label="Description", width="large",
+                                                                                       max_chars=120, help="Kliknij, aby rozwinąć"),
+                                            },
+                             hide_index=True
+                             )
+                # ruff: enable=E501
 
     with tab3:
         st.header("Snapshot")

@@ -14,3 +14,4 @@ services:
       - "0.0.0.0:8501:8501"
     volumes:
       - ../log:/log
+      - ../src/core/db/temp:/src/core/db/temp
