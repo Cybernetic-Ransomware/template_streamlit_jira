@@ -15,6 +15,13 @@ repos:
     - id: check-json
     - id: check-toml
     - id: check-yaml
+    - id: trailing-whitespace
+      files: ^docker/crontab$
+    - id: end-of-file-fixer
+      files: ^docker/crontab$
+    - id: mixed-line-ending
+      args: [ '--fix=lf' ]
+      files: ^docker/crontab$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.8

@@ -1,4 +1,5 @@
 import logging
+import sys
 from pathlib import Path
 
 from src.config.config import LOGGER_LEVEL
@@ -16,8 +17,8 @@ def setup_logger(name: str, file: str, level: int = LOGGER_LEVEL) -> logging.Log
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.ERROR)
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 
         logger.addHandler(file_handler)

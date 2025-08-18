@@ -1,14 +1,17 @@
 FROM python:3.12.10-slim-bullseye
 LABEL authors="aleksander.marszalki"
-LABEL name="cleanupy"
+LABEL name="crony"
 
 WORKDIR /src
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
+    procps \
     build-essential \
     curl \
     software-properties-common \
     tzdata \
+    cron \
+    bash \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get purge -y build-essential
@@ -27,8 +30,15 @@ RUN mkdir /log
 
 EXPOSE 8501/tcp
 
-CMD ["streamlit", "run", "main.py", \
-     "--server.port", "8501", \
-     "--server.address", "0.0.0.0", \
-     "--server.enableCORS", "false", \
-     "--server.headless", "true"]
+COPY docker/crontab /etc/cron.d/snapshooter-cron
+RUN sed -i 's/\r$//' /etc/cron.d/snapshooter-cron
+RUN chmod 0644 /etc/cron.d/snapshooter-cron
+
+RUN mkdir -p /log && \
+    touch /log/snapshooter.log && \
+    chmod 666 /log/snapshooter.log
+
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

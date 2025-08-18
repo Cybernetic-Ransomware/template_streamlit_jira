@@ -9,7 +9,9 @@ def get_jira_connector():
 
 
 def main():
+    print("Snapshot time!", flush=True)
     logger = setup_logger(__name__, "snapshooter")
+
     jira = get_jira_connector()
 
     try:
