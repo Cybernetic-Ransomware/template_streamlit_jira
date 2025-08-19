@@ -17,6 +17,7 @@ RUN python -m pip install --upgrade pip --break-system-packages && \
     pip install uv --break-system-packages
 
 COPY ./pyproject.toml ./uv.lock ./
+RUN uv lock --no-cache
 RUN uv sync --no-cache --no-group dev
 
 COPY ../src .
