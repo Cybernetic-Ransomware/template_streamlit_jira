@@ -1,6 +1,3 @@
-SHELL=/bin/bash
-PATH=/src/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-30 07 * * * root /src/.venv/bin/python /src/core/db/cron.py >> /log/snapshooter.log 2>&1
-30 16 * * * root /src/.venv/bin/python /src/core/db/cron.py >> /log/snapshooter.log 2>&1
-30 21 * * * root /src/.venv/bin/python /src/core/db/cron.py >> /log/snapshooter.log 2>&1
+30 07 * * * /run-cron-job.sh >> /log/snapshooter.log 2>&1
+30 16 * * * /run-cron-job.sh >> /log/snapshooter.log 2>&1
+30 21 * * * /run-cron-job.sh >> /log/snapshooter.log 2>&1

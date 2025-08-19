@@ -1,4 +1,4 @@
-name: cleanupy
+name: Project snaps
 
 services:
   ui:
@@ -14,8 +14,14 @@ services:
     ports:
       - "0.0.0.0:8501:8501"
     volumes:
-      - ../log:/log
-      - ../src/core/db/temp:/src/core/db/temp
+      - log-data:/log
+      - db-data:/src/core/db/temp
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   cron:
     build:
@@ -26,7 +32,14 @@ services:
       - PYTHONPATH=/
     env_file:
       - .env
+    depends_on:
+      ui:
+        condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ../log:/log
-      - ../src/core/db/temp:/src/core/db/temp
+      - log-data:/log
+      - db-data:/src/core/db/temp
+
+volumes:
+  log-data:
+  db-data:
