@@ -78,3 +78,24 @@ class SQLiteConnector:
         if row:
             return json.loads(row[0])
         return None
+
+    def clean_db_older_tran_three_days(self):
+        assert self.cursor is not None
+        assert self.conn is not None
+
+        timestamp = pendulum.now(tz='Europe/Warsaw').subtract(days=4).to_iso8601_string()
+        logger.debug(timestamp)
+
+        try:
+            self.cursor.execute(
+                '''
+                DELETE
+                from issue_snapshots
+                WHERE snapshot_datetime < ?
+                ''',
+                (timestamp, )
+            )
+            self.conn.commit()
+            logger.info(f"Usunięto {self.cursor.rowcount} wierszy starszych niż {timestamp}.")
+        except Exception as e:
+            logger.error(e)

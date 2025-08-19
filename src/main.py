@@ -65,7 +65,7 @@ def main() -> None:
                                                 "description": st.column_config.TextColumn(label="Description", width="large",
                                                                                            max_chars=120, help="Kliknij, aby rozwinąć"),
                                                 "deadline": st.column_config.DatetimeColumn(label="Deadline",
-                                                                                            format="DD/MM/YYYY HH:MM"),
+                                                                                            format="DD/MM/YYYY HH:mm"),
                                                 "attachments": st.column_config.ListColumn(label="Załączniki z ostatnich 3 dni",
                                                                                            help="Kliknij, aby rozwinąć"),
                                                 "count_attachments": st.column_config.NumberColumn(label="SUM"),
@@ -137,8 +137,8 @@ def main() -> None:
                             template_diff_count = len(diff)
 
                             if str(current.get("deadline")) != str(snap_dict.get("deadline")):
-                                snap_date = pendulum.parse(snap_dict.get('deadline')).format('YY/MM/DD HH:mm')
-                                current_date = current.get('deadline').format('YY/MM/DD HH:mm')
+                                snap_date = pendulum.parse(snap_dict.get('deadline')).format('YY/MM/DD HH:mm')  # type: ignore[union-attr]
+                                current_date = current.get('deadline').format('YY/MM/DD HH:mm')  # type: ignore[union-attr]
                                 diff["deadline"] = f"{snap_date} → {current_date}"
 
                             old_desc = str(snap_dict.get("description")).splitlines()
@@ -180,7 +180,7 @@ def main() -> None:
                                             "issue_link": st.column_config.LinkColumn(label="Link", width="small",
                                                                                       max_chars=12, display_text=r"https://jira\.gpd\.com\.pl/browse/([^/]+)"),
                                             "snap_time": st.column_config.DatetimeColumn(label="Czas zapisanego snapa",
-                                                                                        format="DD/MM/YYYY HH:MM"),
+                                                                                        format="DD/MM/YYYY HH:mm"),
                                             "deadline": st.column_config.TextColumn(label="Deadline",
                                                                                     width="small", max_chars=35),
                                             "comments_count": st.column_config.TextColumn(label="Ilość komentarzy",
@@ -201,21 +201,11 @@ def main() -> None:
             try:
                 snapshot = jira.get_project_open_issues()
                 with SQLiteConnector() as db_connector:
+                    db_connector.clean_db_older_tran_three_days()
                     db_connector.snapshot_issues_to_db(snapshot)
 
             except Exception as e:
                 st.error(f"Błąd podczas przepisywania snapshota: {e}")
-
-
-        if "blacklist" not in st.session_state:
-            try:
-                rows = list()
-                with SQLiteConnector() as db_connector:
-                    rows = db_connector.fetch_all()
-                st.session_state.blacklist = rows
-            except Exception as e:
-                st.error(f"Błąd podczas pobierania blacklisty: {e}")
-                st.session_state.blacklist = []
 
 if __name__ == '__main__':
     main()

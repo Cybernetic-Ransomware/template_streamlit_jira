@@ -9,14 +9,15 @@ def get_jira_connector():
 
 
 def main():
-    print("Snapshot time!", flush=True)
     logger = setup_logger(__name__, "snapshooter")
-
+    logger.info("Starting cron job: snapshooter")
     jira = get_jira_connector()
+
 
     try:
         snapshot = jira.get_project_open_issues()
         with SQLiteConnector() as db_connector:
+            db_connector.clean_db_older_tran_three_days()
             db_connector.snapshot_issues_to_db(snapshot)
 
     except Exception as e:
