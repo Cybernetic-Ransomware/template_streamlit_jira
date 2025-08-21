@@ -23,13 +23,11 @@ COPY ./pyproject.toml ./uv.lock ./
 RUN uv lock --no-cache
 RUN uv sync --no-cache --only-group cron
 
-COPY ../src .
+COPY ./src .
 
 ENV PATH="/src/.venv/bin:/usr/local/bin:$PATH"
 
 RUN mkdir /log
-
-EXPOSE 8501/tcp
 
 COPY docker/crontab /etc/cron.d/snapshooter-cron
 RUN sed -i 's/\r$//' /etc/cron.d/snapshooter-cron

@@ -134,6 +134,7 @@ dependencies = [
 [package.dev-dependencies]
 cron = [
     { name = "atlassian-python-api" },
+    { name = "pendulum" },
     { name = "python-decouple" },
 ]
 dev = [
@@ -156,6 +157,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 cron = [
     { name = "atlassian-python-api", specifier = ">=4.0.3" },
+    { name = "pendulum", specifier = ">=3.1.0" },
     { name = "python-decouple", specifier = ">=3.8" },
 ]
 dev = [
