@@ -1,3 +1,4 @@
 30 07 * * * /run-cron-job.sh >> /log/snapshooter.log 2>&1
 30 16 * * * /run-cron-job.sh >> /log/snapshooter.log 2>&1
+48 17 * * * /run-cron-job.sh >> /log/snapshooter.log 2>&1
 30 21 * * * /run-cron-job.sh >> /log/snapshooter.log 2>&1

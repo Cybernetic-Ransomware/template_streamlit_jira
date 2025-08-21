@@ -1,38 +1,56 @@
-FROM python:3.12-alpine AS builder
-
-RUN apk add --no-cache \
-    curl \
-    build-base
-
-RUN python -m pip install --upgrade pip && \
-    pip install uv
-
-WORKDIR /src
-COPY ./pyproject.toml ./uv.lock* ./
-
-RUN uv venv && \
-    uv sync --no-cache --only-group cron
-
-
-FROM python:3.12-alpine
-
-LABEL authors="aleksander.marszalki"
-LABEL name="crony"
+FROM python:3.12.10-alpine3.21 AS builder
 
 WORKDIR /src
 
+RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cut -d'.' -f1-2 /etc/alpine-release)/community" >> /etc/apk/repositories && \
+    apk update
+
 RUN apk add --no-cache \
+    gcc \
     procps \
     curl \
     tzdata \
     bash \
     dcron
 
-COPY --from=builder /src/.venv ./.venv
+RUN python -m pip install --upgrade pip --break-system-packages && \
+    pip install uv --break-system-packages
 
-COPY ../src .
+COPY ./pyproject.toml ./uv.lock ./
+
+RUN uv sync --no-cache --no-group dev
+
+RUN uv sync --no-cache --no-group dev && \
+    echo "=== Virtual env contents ===" && \
+    ls -la .venv/ && \
+    echo "=== Installed packages ===" && \
+    .venv/bin/pip list && \
+    echo "=== Testing python-decouple ===" && \
+    .venv/bin/python -c "import decouple; print('SUCCESS')" || echo "FAILED TO IMPORT"
+
+
+FROM python:3.12.10-alpine3.21 AS runtime
+LABEL authors="aleksander.marszalki"
+LABEL name="crony"
+
+WORKDIR /src
+
+RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cut -d'.' -f1-2 /etc/alpine-release)/community" >> /etc/apk/repositories && \
+    apk update
+
+RUN apk add --no-cache \
+    gcc \
+    procps \
+    curl \
+    tzdata \
+    bash \
+    dcron
 
 ENV PATH="/src/.venv/bin:/usr/local/bin:$PATH"
+
+COPY ./src .
+COPY --from=builder src/.venv /src/.venv
+RUN chmod -R +x /src/.venv/bin/
 
 RUN mkdir /log
 

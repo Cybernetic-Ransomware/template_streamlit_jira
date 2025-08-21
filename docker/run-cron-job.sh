@@ -4,4 +4,4 @@ export PATH="/src/.venv/bin:$PATH"
 
 cd /src
 
-exec python /src/db/cron.py
+exec python /src/core/db/cron.py
